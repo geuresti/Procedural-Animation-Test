@@ -21,25 +21,24 @@ addEventListener("mousemove", function(event) {
 addEventListener("resize", function() {
     canvas.width = innerWidth;
     canvas.height = innerHeight;
-
-    init();
 });
 
-const turnThreshold = 0.78;
-const followSpeed = 0.05;
+const followSpeed = 0.65;
 
-function Circle(x, y, dx, dy, radius, color) {
+function Circle(x, y, dx, dy, radius, mainColor, secondaryColor, angle=0) {
 
     this.x = x;
     this.y = y;
     this.dx = dx;
     this.dy = dy;
     this.radius = radius;
-    this.color = color;
+    this.mainColor = mainColor;
+    this.secondaryColor = secondaryColor;
     this.leftSideX;
     this.leftSideY;
     this.rightSideX;
     this.rightSideY;
+    this.angle = angle;
 
     this.follow = function(segment, hasEyes=false, isHead=false, isTail=false) {
         // follow an object from a distance
@@ -59,26 +58,6 @@ function Circle(x, y, dx, dy, radius, color) {
                     var dirY = this.dy / distance;
 
                     var difference = segment.radius - distance;
-
-                    /*var angle1 = Math.atan2(this.dy, this.dx);
-                    var angle2 = Math.atan2(segment.y - this.y, segment.x - this.x);
-                    var angle2 = Math.atan2(segment.dy, segment.dx);
-
-                    var angularDiff = (angle2 - angle1 + Math.PI) % (2 * Math.PI) - Math.PI;
-                    */
-
-                    // need to check current angle against object im following
-                    /*if (angularDiff > turnThreshold) {
-                        // calculate smallest angular diff
-                        console.log("agmonus");
-                        var newAngle = angle1 + Math.max(-turnThreshold, Math.min(angularDiff, turnThreshold));
-                        this.x += Math.cos(newAngle) * difference;
-                        this.y += Math.sin(newAngle) * difference;
-                        
-                    } else {
-                        this.x += difference * dirX;
-                        this.y += difference * dirY;
-                    }*/
 
                     this.x += difference * dirX * followSpeed;
                     this.y += difference * dirY * followSpeed;
@@ -102,7 +81,7 @@ function Circle(x, y, dx, dy, radius, color) {
         this.rightSideX = this.x + this.radius * Math.cos(rightSideTheta);
         this.rightSideY = this.y + this.radius * Math.sin(rightSideTheta);
         
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = this.mainColor;
         ctx.lineWidth = 3;
 
         // add skin over head
@@ -164,7 +143,7 @@ function Circle(x, y, dx, dy, radius, color) {
             ctx.arc(eyeLeftX, eyeLeftY, 8, 0, Math.PI * 2, false);
             ctx.arc(eyeRightX, eyeRightY, 8, 0, Math.PI * 2, false);
 
-            ctx.fillStyle = "orange";
+            ctx.fillStyle = this.secondaryColor;
             ctx.fill();
             ctx.closePath();
         }
@@ -210,36 +189,77 @@ function Circle(x, y, dx, dy, radius, color) {
     };
 }
 
-function generateRandomCoordinates() {
+const stepSize = 10;
+const maxTurnAngle = Math.PI / 8;
 
-    var randX = Math.random() * canvas.width;
-    var randY = Math.random() * canvas.height;
+function generateNewPosition(segment) {
 
-    director.x = randX;
-    director.y = randY;
+    var newAngle = (Math.random() * 2 - 1) * maxTurnAngle;
+    segment.angle += newAngle;
 
+    var newX = segment.x + Math.cos(segment.angle) * stepSize;
+    var newY = segment.y + Math.sin(segment.angle) * stepSize;
+
+    if (newX < 20 || newX > canvas.width - 20) {
+        segment.angle = Math.PI - segment.angle;
+    }
+
+    if (newY < 20 || newY > canvas.height - 20) {
+        segment.angle = -segment.angle;
+    }
+
+    segment.x += Math.cos(segment.angle) * stepSize;
+    segment.y += Math.sin(segment.angle) * stepSize;
 }
 
-var circlesArr;
-var size;
-const mainColor = "#85d589";
+const colorA = "#85d589";
+const colorB = "orange"
+const colorC = "#d5dc41";
+const colorD = "#54c2fc";
+
+/* --------------------------------- */
+var creatureA;
+var creatureASize;
+var intialAngleA = Math.random() * Math.PI * 2;
+var directorCreatureARadii;
+var directorA = new Circle(canvas.width / 2 - 100, canvas.height / 2 - 100, 0, 0, 20, colorA, colorB, intialAngleA);
+var distanceFromDirectorA;
+/* --------------------------------- */
+var creatureB;
+var creatureBSize;
+var intialAngleB = Math.random() * Math.PI * 2;
+var directorCreatureBRadii;
+var directorB = new Circle(canvas.width / 2 - 100, canvas.height / 2 - 100, 0, 0, 20, colorC, colorD, intialAngleB);
+var distanceFromDirectorB;
+/* --------------------------------- */
 
 // initialize canvas object (in center of screen)
 function init() {
-    var head = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 65, mainColor);
-    var seg1 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 75, mainColor);
-    var seg2 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 55, mainColor);
-    var seg3 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 65, mainColor);
-    var seg4 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 55, mainColor);
-    var seg5 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 65, mainColor);
-    var seg6 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 50, mainColor);
-
-    circlesArr = [head, seg1, seg2, seg3, seg4, seg5, seg6];
-
-    size = circlesArr.length;
+    var headA = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 55, colorA, colorB);
+    var segA1 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 55, colorA, colorB);
+    var segA2 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 45, colorA, colorB);
+    var segA3 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 55, colorA, colorB);
+    var segA4 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 45, colorA, colorB);
+    var segA5 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 55, colorA, colorB);
+    var segA6 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 40, colorA, colorB);
+    creatureA = [headA, segA1, segA2, segA3, segA4, segA5, segA6];
+    creatureASize = creatureA.length;
+    directorCreatureARadii = creatureA[0].radius + directorA.radius;
+    generateNewPosition(directorA);
+    /* --------------------------------- */
+    var headB = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 30, colorC, colorD);
+    var segB1 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 30, colorC, colorD);
+    var segB2 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 30, colorC, colorD);
+    var segB3 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 30, colorC, colorD);
+    var segB4 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 30, colorC, colorD);
+    var segB5 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 30, colorC, colorD);
+    var segB6 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 30, colorC, colorD);
+    var segB7 = new Circle(canvas.width / 2, canvas.height / 2, 0, 0, 30, colorC, colorD);
+    creatureB = [headB, segB1, segB2, segB3, segB4, segB5, segB6, segB7];
+    creatureBSize = creatureB.length;
+    directorCreatureBRadii = creatureB[0].radius + directorB.radius;
+    generateNewPosition(directorB);
 }
-
-var director = new Circle(canvas.width / 2 - 100, canvas.height / 2 - 100, 0, 0, 80, mainColor);
 
 function animate() {
 
@@ -249,37 +269,60 @@ function animate() {
     // clear canvas before drawing next frame
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(director.x, director.y, director.radius, 0, Math.PI * 2, false);
-    ctx.strokeStyle = "black";
-    ctx.stroke();
-    ctx.closePath();
-
     // animate each segment
-    if (size > 0) {
+    if (creatureASize > 0) {
 
-        for (var i = 0; i < size; i++) {
+        for (var i = 0; i < creatureASize; i++) {
 
-            segment = circlesArr[i];
+            segment = creatureA[i];
 
             if (i === 0) {
                 //segment.follow(mouse, true, true);
-                segment.follow(director, true, true);
-            } else if (i === size - 1) {
-                prev = circlesArr[i-1];
+                segment.follow(directorA, true, true);
+            } else if (i === creatureASize - 1) {
+                prev = creatureA[i-1];
                 segment.follow(prev, false, false, true);
             } else {
-                prev = circlesArr[i-1];
+                prev = creatureA[i-1];
                 segment.follow(prev);
             }
         }
+    }
+
+    distanceFromDirectorA = Math.sqrt((creatureA[0].dx ** 2 + creatureA[0].dy ** 2));
+
+    if (distanceFromDirectorA < directorCreatureARadii) {
+        generateNewPosition(directorA);
+    }
+
+    /* --------------------------------- */
+
+    if (creatureBSize > 0) {
+
+        for (var i = 0; i < creatureBSize; i++) {
+
+            segment = creatureB[i];
+
+            if (i === 0) {
+                //segment.follow(mouse, true, true);
+                segment.follow(directorB, true, true);
+            } else if (i === creatureBSize - 1) {
+                prev = creatureB[i-1];
+                segment.follow(prev, false, false, true);
+            } else {
+                prev = creatureB[i-1];
+                segment.follow(prev);
+            }
+        }
+    }
+
+    distanceFromDirectorB = Math.sqrt((creatureB[0].dx ** 2 + creatureB[0].dy ** 2));
+
+    if (distanceFromDirectorB < directorCreatureBRadii) {
+        generateNewPosition(directorB);
     }
 
 }
 
 init();
 animate();
-
-//setInterval(generateRandomCoordinates, 2000);
-generateRandomCoordinates();
