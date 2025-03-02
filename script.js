@@ -337,18 +337,24 @@ function animateCreature(creature, controllable=false) {
     }
 }
 
-var creatureA;
-var creatureB;
-var creatureC;
-var creatureD; 
-
-// initialize canvas object (in center of screen)
+// initialize creatures
 function init() {
-    creatureA = generateCreature(8, [], 35, 2, "purple", "green");
-    creatureB = generateCreature(7, [], 50, 1, "pink", "green");
-    creatureC = generateCreature(7, [55, 55, 45, 55, 45, 55, 40], 0, 0, "#85d589", "orange");
-    creatureD = generateCreature(8, [30, 30, 30, 30, 30, 30, 30, 30], 0, 0, "lightblue", "red");
-    creatureE = generateCreature(7, [], 40, 10, "brown", "yellow");
+    creatureA = generateCreature(8, [], 35, 2, "#FAD4C0", "#C0E0FA");
+    creatureB = generateCreature(3, [], 50, 20, "#F5A8A2", "#A2F5E0");
+    creatureC = generateCreature(7, [55, 55, 45, 55, 45, 55, 40], 0, 0, "#85D589", "#FBBC45");
+    creatureD = generateCreature(13, [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30], 0, 0, "#D4C0FA", "#FAF4C0");
+    creatureE = generateCreature(7, [], 40, 10, "#C0E8FA", "#FAC0D4");
+    creatureF = generateCreature(15, [], 30, 5, "#C0FAC6", "#FAC0B0");
+    creatureG = generateCreature(8, [80, 70, 60, 50, 40, 30, 20, 10], 0, 0, "#C6C8FA", "#FAC8C6");
+    creatureH = generateCreature(12, [], 10, 5, "#E0C0FA", "#FAE8C0");
+    creatureI = generateCreature(20, [], 20, 3, "#F4A97D", "#7DF4E2");
+    creatureJ = generateCreature(8, [], 80, 6, "#FAD8A0", "#D8A0FA");
+    creatureK = generateCreature(3, [], 30, 2, "#C6F0FA", "#FADAC0");
+    creatureL = generateCreature(16, [], 40, 15, "#C0FAE0", "#FAC6B8");
+
+    creatureM = generateCreature(8, [15, 10, 8, 10, 8, 6, 10, 8], 0, 0, "#F5A8B8", "#A8F5E0");
+    creatureN = generateCreature(12, [], 15, 3, "#EFA38A", "#8AEFE0");
+    creatureO = generateCreature(30, [], 12, 8, "#F4A888", "#88F4E0");
 }
 
 function animate() {
@@ -364,6 +370,16 @@ function animate() {
     animateCreature(creatureC, true);
     animateCreature(creatureD);
     animateCreature(creatureE);
+    animateCreature(creatureF);
+    animateCreature(creatureG);
+    animateCreature(creatureH);
+    animateCreature(creatureI);
+    animateCreature(creatureJ);
+    animateCreature(creatureK);
+    animateCreature(creatureL);
+    animateCreature(creatureM);
+    animateCreature(creatureN);
+    animateCreature(creatureO);
 }
 
 init();
