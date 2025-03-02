@@ -5,13 +5,34 @@ var ctx = canvas.getContext("2d");
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
+const stepSize = 10;
+const maxTurnAngle = Math.PI / 8;
+
+const HEAD = 0;
+const BODY = 0;
+const DIRECTOR = 1;
+const FOLLOW_RANGE = 2;
+
+const canvasCenterWidth = canvas.width / 2;
+const canvasCenterHeight = canvas.height / 2;
+
 const devMode = false;
+
+var clicking = false;
 
 var mouse = {
     x: innerWidth / 2,
     y: innerHeight / 2,
-    radius: 65,
+    radius: 75,
 };
+
+addEventListener("mousedown", function(event) {
+    clicking = true;
+});
+
+addEventListener("mouseup", function(event) {
+    clicking = false;
+});
 
 addEventListener("mousemove", function(event) {
     mouse.x = event.clientX;
@@ -25,52 +46,56 @@ addEventListener("resize", function() {
 
 const followSpeed = 0.65;
 
-function Circle(x, y, radius, mainColor, secondaryColor, angle=0) {
+function Circle(x, y, radius, mainColor, secondaryColor, angle=0, isHead=false, hasEyes=false, headShape='A', isTail=false, tailShape='B') {
 
     this.x = x;
     this.y = y;
     this.dx = 0;
     this.dy = 0;
     this.radius = radius;
+
     this.mainColor = mainColor;
     this.secondaryColor = secondaryColor;
+    this.isHead = isHead;
+    this.hasEyes = hasEyes;
+    this.headShape = headShape;
+    this.isTail = isTail;
+    this.tailShape = tailShape;
+
+    this.angle = angle;
     this.leftSideX;
     this.leftSideY;
     this.rightSideX;
     this.rightSideY;
-    this.angle = angle;
 
-    this.follow = function(segment, hasEyes=false, isHead=false, isTail=false) {
+    this.follow = function(segment) {
         // follow an object from a distance
-        if (segment.radius > 0) {
 
-            this.dx = this.x - segment.x;
-            this.dy = this.y - segment.y;
+        this.dx = this.x - segment.x;
+        this.dy = this.y - segment.y;
 
-            var distance = Math.sqrt(this.dy**2 + this.dx**2);
+        var distance = Math.sqrt(this.dy**2 + this.dx**2);
 
-            // the circle has left the constrained area
-            if (distance > segment.radius) {
+        // the circle has left the constrained area
+        if (distance > segment.radius) {
 
-                if (distance !== 0) {
+            if (distance !== 0) {
 
-                    var dirX = this.dx / distance;
-                    var dirY = this.dy / distance;
+                var dirX = this.dx / distance;
+                var dirY = this.dy / distance;
 
-                    var difference = segment.radius - distance;
+                var difference = segment.radius - distance;
 
-                    this.x += difference * dirX * followSpeed;
-                    this.y += difference * dirY * followSpeed;
+                this.x += difference * dirX * followSpeed;
+                this.y += difference * dirY * followSpeed;
 
-                } 
-            }
-
+            } 
         }
 
-        this.draw(segment, hasEyes, isHead, isTail);
+        this.draw(segment);
     }
 
-    this.draw = function(segment, hasEyes, isHead, isTail) {
+    this.draw = function(segment) {
 
         // calculate sides
         const leftSideTheta = Math.atan2(this.dy, this.dx) + Math.PI * 0.5;
@@ -85,7 +110,7 @@ function Circle(x, y, radius, mainColor, secondaryColor, angle=0) {
         ctx.lineWidth = 3;
 
         // add skin over head
-        if (isHead) {
+        if (this.isHead) {
             const theta = Math.atan2(this.dy, this.dx);
 
             const startAngle = theta - (Math.PI / 2);
@@ -93,6 +118,7 @@ function Circle(x, y, radius, mainColor, secondaryColor, angle=0) {
             const endAngle = theta + (Math.PI / 2);
 
             ctx.beginPath();
+
             ctx.arc(this.x, this.y, this.radius, startAngle, endAngle, true);
 
             if (devMode) {
@@ -105,7 +131,7 @@ function Circle(x, y, radius, mainColor, secondaryColor, angle=0) {
         }
 
         // add skin over tail
-        if (isTail) {
+        if (this.isTail) {
             const theta = Math.atan2(this.dy, this.dx);
 
             const startAngle = theta - (Math.PI / 2);
@@ -126,7 +152,7 @@ function Circle(x, y, radius, mainColor, secondaryColor, angle=0) {
         }
 
         // draw eyes
-        if (hasEyes) {
+        if (this.hasEyes) {
 
             // use parametric equation to locate the sides of the segment
             const thetaLeftEye = Math.atan2(this.dy, this.dx) + Math.PI * 0.75;
@@ -189,9 +215,6 @@ function Circle(x, y, radius, mainColor, secondaryColor, angle=0) {
     };
 }
 
-const stepSize = 10;
-const maxTurnAngle = Math.PI / 8;
-
 function generateNewPosition(segment) {
 
     var newAngle = (Math.random() * 2 - 1) * maxTurnAngle;
@@ -212,23 +235,53 @@ function generateNewPosition(segment) {
     segment.y += Math.sin(segment.angle) * stepSize;
 }
 
-function generateRandomCreature(segmentCount, avgSegmentSize, segmentSizeRange, mainColor, secondaryColor) {
+function generateCreature(segmentCount, segmentRadii, avgSegmentSize, segmentSizeRange, mainColor, secondaryColor) {
 
     var newCreature = [];
     var intialAngle = Math.random() * Math.PI * 2;
 
-    var director = new Circle(canvas.width / 2 - 100, canvas.height / 2 - 100, 20, mainColor, secondaryColor, intialAngle);
+    var director = new Circle(canvasCenterWidth  - 100, canvasCenterHeight / 2 - 100, 20, mainColor, secondaryColor, intialAngle);
     
     var followRange;
 
+    var isHead = true;
+    var hasEyes = true;
+    var headShape = 'A';
+    var isTail = false;
+    var tailShape = 'A';
+
+    var segmentSize;
+
+    var predefinedSegments = segmentRadii.length > 0;
+
     for (var i = 0; i < segmentCount; i++) {
+
+        if (predefinedSegments) {
+            segmentSize = segmentRadii[i];
+        } else {
+            segmentSize = Math.random() * ((avgSegmentSize + segmentSizeRange) - (avgSegmentSize - segmentSizeRange) + 1) + (avgSegmentSize - segmentSizeRange);
+        }
+
+        if (i == segmentCount - 1) {
+            isTail = true;
+        }
+
         newCreature.push(new Circle(
-            canvas.width / 2,
-            canvas.height / 2,
-            Math.random() * ((avgSegmentSize + segmentSizeRange) - (avgSegmentSize - segmentSizeRange) + 1) + (avgSegmentSize - segmentSizeRange),
+            canvasCenterWidth,
+            canvasCenterHeight,
+            segmentSize,
             mainColor,
-            secondaryColor
+            secondaryColor,
+            0,
+            isHead,
+            hasEyes,
+            headShape,
+            isTail,
+            tailShape
         ));
+
+        isHead = false;
+        hasEyes = false;
     }
 
     var followRange = newCreature[0].radius + director.radius;
@@ -236,32 +289,7 @@ function generateRandomCreature(segmentCount, avgSegmentSize, segmentSizeRange, 
     return [newCreature, director, followRange];
 }
 
-function generateCreature(segmentRadii, mainColor, secondaryColor) {
-    var newCreature = [];
-    var intialAngle = Math.random() * Math.PI * 2;
-
-    var director = new Circle(canvas.width / 2 - 100, canvas.height / 2 - 100, 20, mainColor, secondaryColor, intialAngle);
-    
-    var followRange;
-
-    var segmentCount = segmentRadii.length;
-
-    for (var i = 0; i < segmentCount; i++) {
-        newCreature.push(new Circle(
-            canvas.width / 2,
-            canvas.height / 2,
-            segmentRadii[i],
-            mainColor,
-            secondaryColor
-        ));
-    }
-
-    var followRange = newCreature[0].radius + director.radius;
-
-    return [newCreature, director, followRange];
-}
-
-function animateCreature(creature) {
+function animateCreature(creature, controllable=false) {
 
     var segmentCount = creature[BODY].length;
 
@@ -269,30 +297,45 @@ function animateCreature(creature) {
 
         segment = creature[BODY][i];
 
+        // head segment
         if (i === 0) {
-            segment.follow(creature[DIRECTOR], true, true);
-        } else if (i === segmentCount - 1) {
-            prev = creature[BODY][i-1];
-            segment.follow(prev, false, false, true);
+            // If the creature is controllable and the mouse is held down,
+            if (controllable && clicking) {
+                // move the head segment towards the mouse position
+                segment.follow(mouse);
+            } else {
+                // the head segment will attempt to move to the director's position
+                segment.follow(creature[DIRECTOR])
+            }
         } else {
+            // a segment will follow the one ahead of it in the array
             prev = creature[BODY][i-1];
-            segment.follow(prev);
+
+            // tail segment
+            if (i === segmentCount - 1) {
+                segment.follow(prev);
+            } else {
+            // regular body segment
+                segment.follow(prev);
+            }
+        } 
+        
+    }
+
+    // If we are controlling the creature, set its director to the mouse position
+    // This will prevent snapping when releasing control of a creature
+    if (controllable && clicking) {
+        creature[DIRECTOR].x = mouse.x;
+        creature[DIRECTOR].y = mouse.y;
+    } else {
+    // If the creature has reached its director, generate new director position
+        var directorDistance = Math.sqrt((creature[BODY][HEAD].dx ** 2 + creature[BODY][HEAD].dy ** 2));
+
+        if (directorDistance < creature[FOLLOW_RANGE]) {
+            generateNewPosition(creature[DIRECTOR]);
         }
     }
-
-    var directorDistance = Math.sqrt((creature[BODY][HEAD].dx ** 2 + creature[BODY][HEAD].dy ** 2));
-
-    if (directorDistance < creature[FOLLOW_RANGE]) {
-        generateNewPosition(creature[DIRECTOR]);
-    }
-
-    return 0
 }
-
-const HEAD = 0;
-const BODY = 0;
-const DIRECTOR = 1;
-const FOLLOW_RANGE = 2;
 
 var creatureA;
 var creatureB;
@@ -301,11 +344,11 @@ var creatureD;
 
 // initialize canvas object (in center of screen)
 function init() {
-    creatureA = generateRandomCreature(8, 35, 2, "purple", "green");
-    creatureB = generateRandomCreature(7, 50, 1, "#85d589", "orange");
-    creatureC = generateCreature([55, 55, 45, 55, 45, 55, 40], "pink", "lightblue");
-    creatureD = generateCreature([30, 30, 30, 30, 30, 30, 30, 30], "#d5dc41", "#54c2fc");
-    creatureE = generateRandomCreature(7, 40, 10, "brown", "yellow");
+    creatureA = generateCreature(8, [], 35, 2, "purple", "green");
+    creatureB = generateCreature(7, [], 50, 1, "pink", "green");
+    creatureC = generateCreature(7, [55, 55, 45, 55, 45, 55, 40], 0, 0, "#85d589", "orange");
+    creatureD = generateCreature(8, [30, 30, 30, 30, 30, 30, 30, 30], 0, 0, "lightblue", "red");
+    creatureE = generateCreature(7, [], 40, 10, "brown", "yellow");
 }
 
 function animate() {
@@ -318,7 +361,7 @@ function animate() {
     
     animateCreature(creatureA);
     animateCreature(creatureB);
-    animateCreature(creatureC);
+    animateCreature(creatureC, true);
     animateCreature(creatureD);
     animateCreature(creatureE);
 }
